@@ -4,7 +4,7 @@ import torch
 
 class dissected_Conv2d(torch.nn.Module):       #2d conv Module class that has presum activation maps as intermediate output
 
-	def __init__(self, from_conv):      # from conv is normal nn.Conv2d object to pull weights and bias from
+	def __init__(self, from_conv, absolute = True):      # from conv is normal nn.Conv2d object to pull weights and bias from
 		super(dissected_Conv2d, self).__init__()
 		#self.from_conv = from_conv
 		self.in_channels = from_conv.weight.shape[1]
@@ -17,6 +17,7 @@ class dissected_Conv2d(torch.nn.Module):       #2d conv Module class that has pr
 
 		self.kernel_scores = None
 		self.preadd_out_hook = None
+		self.absolute = absolute
 
 	def gen_inout_permutation(self):
 		'''
@@ -76,7 +77,10 @@ class dissected_Conv2d(torch.nn.Module):       #2d conv Module class that has pr
 
 	def compute_kernel_scores(self,grad):
 		activation = self.preadd_out
-		self.kernel_scores = torch.abs(activation * grad).mean(dim=(2,3))
+		if self.absolute:
+			self.kernel_scores = torch.abs(activation * grad).mean(dim=(2,3))
+		else:
+			self.kernel_scores = (activation * grad).mean(dim=(2,3))
 		self.kernel_scores = self.kernel_scores.sum(dim=0).detach().cpu()
 		self.preadd_out = None #clean up, memory is precious
 		
@@ -129,13 +133,13 @@ class dissected_Conv2d(torch.nn.Module):       #2d conv Module class that has pr
 
 
 # takes a full model and replaces all conv2d instances with dissected conv 2d instances
-def dissect_model(model,mod_names = []):
+def dissect_model(model,mod_names = [],absolute=True):
 
 	for name, module in reversed(model._modules.items()):
 		if len(list(module.children())) > 0:
 			mod_names.append(str(name))
 			# recurse
-			model._modules[name] = dissect_model(module,mod_names =mod_names)
+			model._modules[name] = dissect_model(module,mod_names =mod_names, absolute=absolute)
 			mod_names.pop()
 
 		if isinstance(module, torch.nn.modules.conv.Conv2d):    # found a 2d conv module to transform

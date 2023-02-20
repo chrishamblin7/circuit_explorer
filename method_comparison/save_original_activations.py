@@ -1,14 +1,14 @@
 import torch
 from collections import OrderedDict
-from circuit_pruner.utils import load_config
-from circuit_pruner.data_loading import rank_image_data
+from circuit_explorer.utils import load_config
+from circuit_explorer.data_loading import rank_image_data
 import torch.utils.data as data
 import torchvision.datasets as datasets
-from circuit_pruner.data_loading import rank_image_data
-from circuit_pruner.simple_api.target import multi_feature_target_saver
+from circuit_explorer.data_loading import rank_image_data
+from circuit_explorer.target import multi_feature_target_saver
 import os
 
-config_file = '../configs/vgg11_config.py'
+config_file = '../configs/alexnet_config.py'
 device = 'cuda:0'
 
 config = load_config(config_file)
@@ -19,7 +19,7 @@ data_path = config.data_path
 model = config.model
 _ = model.eval().to(device)
 
-out_root = '/mnt/data/chris/nodropbox/Projects/circuit_pruner/original_activations/'
+out_root = './original_activations/'
 
 imageset = data_path.split('/')[-1]
 if data_path[-1] == '/':
@@ -47,7 +47,7 @@ for layer in layers:
 
 
 #we save target activations in a context that allows us to handle the annoying problem of dangling hooks
-with multi_feature_target_saver(model,targets,kill_forward=True,device='cpu') as target_saver:
+with multi_feature_target_saver(model,targets,kill_forward=True) as target_saver:
     
     #then we just run our data through the model, the target_saver will store activations for us
     for i, data in enumerate(dataloader, 0):

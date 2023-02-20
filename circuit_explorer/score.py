@@ -23,7 +23,7 @@ from circuit_explorer.dissected_Conv2d import *
 Functions for computing saliency scores for parameters on models
 '''
 
-def snip_score(model,dataloader,target_layer_name,unit,layer_types_2_score = [nn.Conv2d,nn.Linear],loss_f = sum_abs_loss):
+def snip_score(model,dataloader,target_layer_name,unit,layer_types_2_score = [nn.Conv2d,nn.Linear],loss_f = sum_abs_loss,absolute=True):
 
 	_ = model.eval()
 	device = next(model.parameters()).device  
@@ -55,10 +55,17 @@ def snip_score(model,dataloader,target_layer_name,unit,layer_types_2_score = [nn
 
 				try: #does the model have a weight mask?
 					#scale scores by batch size (*inputs.shape)
-					layer_scores = torch.abs(layer.weight_mask.grad).detach().cpu()*inputs.shape[0]
+					if absolute:
+						layer_scores = torch.abs(layer.weight_mask.grad).detach().cpu()*inputs.shape[0]
+					else:
+						layer_scores = (layer.weight_mask.grad).detach().cpu()*inputs.shape[0]
 
 				except:
-					layer_scores = torch.abs(layer.weight*layer.weight.grad).detach().cpu()*inputs.shape[0]
+					if absolute:
+						layer_scores = torch.abs(layer.weight*layer.weight.grad).detach().cpu()*inputs.shape[0]
+					else:
+						layer_scores = (layer.weight*layer.weight.grad).detach().cpu()*inputs.shape[0]
+
 
 				
 				if layer_name not in scores.keys():
@@ -184,12 +191,12 @@ def force_score(model, dataloader,target_layer_name,unit,keep_ratio=.1, T=10, nu
 	return structured_scores
 
 
-def actgrad_kernel_score(model,dataloader,target_layer_name,unit,loss_f = sum_abs_loss,dissect_model=True):
+def actgrad_kernel_score(model,dataloader,target_layer_name,unit,loss_f = sum_abs_loss,run_dissect_model=True):
 
 	_ = model.eval()
 	device = next(model.parameters()).device 
 
-	if dissect_model:
+	if run_dissect_model:
 		dis_model = dissect_model(deepcopy(model))
 		model.to('cpu') #we need as much memory as we can get
 	else:
@@ -323,7 +330,7 @@ class actgrad_filter_extractor(nn.Module):
 			self.hooks['backward'][layer_id].remove()
 
 
-def actgrad_filter_score(model,dataloader,target_layer_name,unit,loss_f=sum_abs_loss,absolute=True,return_target=False,relu=True,score_type = 'actgrad'):
+def actgrad_filter_score(model,dataloader,target_layer_name,unit,loss_f=sum_abs_loss, absolute=True,return_target=False,relu=True,score_type = 'actgrad'):
     all_layers = OrderedDict([*model.named_modules()])
     scoring_layers = []
     for layer in all_layers:

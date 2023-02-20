@@ -5,11 +5,11 @@ from subprocess import call
 import os
 from circuit_explorer import root_path
 
-#Dictionary with the online gdrive keys for models image fodler etc.
+#Dictionary with the online gdrive keys for models image folder etc.
 online_models = {'mnist':{'model':['1X6wR6nJ_SguVzd6MVFelvXsH9G2uR4WZ','mnist_statedict.pt'],'images':['1rGXi_pWGvz3UsdO1FpkWc2WsU-M42Z3v','mnist']},
 				 'cifar10':{'model':None,'images':['17pjtPG-MJK7mhTh_KHvHLHUwSButkwLA','cifar10']},
-				 'alexnet':{'model':None,'images':['1NRbJJebFnyuqezFqMQ1qY53w5mXmelEl','imagenet_50']},
-				 'alexnet_sparse':{'model':['1MMr2LgwQkQIDb8SNwqLaqnezXJOVUHps','alexnet_sparse_statedict.pt'],'images':['1_6aXd6vJykftpGR9YuMxlyAm1f96fADv','imagenet_2']},
+				 'alexnet':{'model':None,'images':['1Onu6pUVH4m0GNHFgc7rTmOfLHQzCUdJY','imagenet_2']},
+				 'alexnet_sparse':{'model':['1MMr2LgwQkQIDb8SNwqLaqnezXJOVUHps','alexnet_sparse_statedict.pt'],'images':['1Onu6pUVH4m0GNHFgc7rTmOfLHQzCUdJY','imagenet_2']},
 				}
 
 online_model_names = list(online_models.keys())

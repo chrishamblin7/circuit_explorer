@@ -263,7 +263,7 @@ def layer_activations_from_dataloader(layers,dataloader,model,batch_size=64):
   
 
   for i, data in enumerate(dataloader):
-    if i%4 == 0:
+    if i%int(len(dataloader)/4) == 0:
       print(str(i)+'/'+str(len(dataloader)))
     images = data[0].to(device)
     with layer_saver(model, layers) as extractor:
@@ -297,15 +297,34 @@ def sum_abs_loss(target):
 #     #position should be (batch_i,H,W)
 #     return target[position[0],position[1],position[2]]
 
+def pearson_loss(x,y):
+    return x * y * torch.rsqrt(torch.sum(x ** 2)) * torch.rsqrt(torch.sum(y ** 2))
 
 class positional_loss(nn.Module):
     '''
     position should be (H,W)
     target should be (batch,H,W) (channel already selected)
     '''
-    def __init__(self, position):
+    def __init__(self, position, loss_func = sum_abs_loss):
         super().__init__()
         self.position = position
+        self.loss_func = loss_func
 
     def forward(self,target):
-        return target[:,self.position[0],self.position[1]].mean(dim=0)
+        #return target[:,self.position[0],self.position[1]].mean(dim=0)
+        return self.loss_func(target[:,self.position[0],self.position[1]])
+    
+class distance_2_target_loss(nn.Module):
+    '''
+    position should be (H,W)
+    target should be (batch,H,W) (channel already selected)
+    '''
+    def __init__(self, target, loss_func = nn.L1Loss()):
+        super().__init__()
+        self.target = target
+        self.loss_func = loss_func
+
+    def forward(self,x):
+        #return target[:,self.position[0],self.position[1]].mean(dim=0)
+        return self.loss_func(x,self.target)
+    
