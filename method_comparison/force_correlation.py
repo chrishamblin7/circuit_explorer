@@ -6,16 +6,16 @@ from collections import OrderedDict
 import numpy as np
 import time
 import os
-from circuit_pruner.utils import load_config
-from circuit_pruner.data_loading import rank_image_data
+from circuit_explorer.utils import load_config
+from circuit_explorer.data_loading import rank_image_data
 
 ##DATA LOADER###
 import torch.utils.data as data
 import torchvision.datasets as datasets
-from circuit_pruner.data_loading import rank_image_data
+from circuit_explorer.data_loading import rank_image_data
 from copy import deepcopy
-from circuit_pruner.simple_api.score import force_score, structure_scores
-from circuit_pruner.simple_api.target import feature_target_saver
+from circuit_explorer.score import force_score, structure_scores
+from circuit_explorer.target import feature_target_saver
 
 
 
@@ -31,7 +31,7 @@ def get_args():
 	parser.add_argument('--structure', type = str, default='kernels', help='default kernels')
 	parser.add_argument('--sparsity', type=float, default=.5,
 						help='number of batches for dataloader')
-	parser.add_argument('--out-root', type=str,default ='/mnt/data/chris/nodropbox/Projects/circuit_pruner/correlations/',help='root path to output folder')
+	parser.add_argument('--out-root', type=str,default ='/mnt/data/chris/nodropbox/Projects/circuit_explorer/correlations/',help='root path to output folder')
 	parser.add_argument("--config", type = str,default = '../configs/alexnet_sparse_config.py',help='relative_path to config file')
 	parser.add_argument("--data-path", type = str, default = None, help='path to image data folder')
 	parser.add_argument('--device', type = str, default='cuda:0', help='default "cuda:0"')  

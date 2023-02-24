@@ -1,7 +1,7 @@
 #functions for using lucent to get visualizations
-from lucent_fresh.optvis import render
-from lucent_fresh.modelzoo.util import get_model_layers
-from lucent_fresh.optvis import render, param, transform, objectives
+from lucent_video.optvis import render
+from lucent_video.modelzoo.util import get_model_layers
+from lucent_video.optvis import render, param, transform, objectives
 
 import inspect
 import time

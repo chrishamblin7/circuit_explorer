@@ -263,8 +263,8 @@ def layer_activations_from_dataloader(layers,dataloader,model,batch_size=64):
   
 
   for i, data in enumerate(dataloader):
-    if i%int(len(dataloader)/4) == 0:
-      print(str(i)+'/'+str(len(dataloader)))
+    #if i%int(len(dataloader)/4) == 0:
+    #  print(str(i)+'/'+str(len(dataloader)))
     images = data[0].to(device)
     with layer_saver(model, layers) as extractor:
       batch_layer_activations = extractor(images) #all features for layer and all images in batch

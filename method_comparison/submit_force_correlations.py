@@ -1,12 +1,12 @@
 from subprocess import call
-from circuit_pruner.utils import load_config
+from circuit_explorer.utils import load_config
 
-config_file = '../configs/vgg11_config.py'
+config_file = '../configs/alexnet_sparse_config.py'
 
 config = load_config(config_file)
 layers = config.layers
 units = config.units
-batch_size = 64
+batch_size = 1
 
 
 print(batch_size)
@@ -14,16 +14,16 @@ print(layers)
 print(units)
 
 data_path = '../image_data/imagenet_2/'
-device = 'cuda:0'
+device = 'cuda:2'
 
-#sparsities = [.9,.8,.7,.6,.5,.4,.3,.2,.1,.05,.01,.005,.001]
-sparsities = [.2]
-layers = [layers[0]]
-units = [units[0]]
+sparsities = [.9,.8,.7,.6,.5,.4,.3,.2,.1,.05,.01,.005,.001]
+#sparsities = [.2]
+##layers = [layers[0]]
+#units = [units[0]]
 
-out_root = '/mnt/data/chris/nodropbox/Projects/circuit_pruner/correlations/'
+out_root = './correlations/'
 
-original_act_file = '/mnt/data/chris/nodropbox/Projects/circuit_pruner/original_activations/%s/imagenet_2/original_activations.pt'%config.name
+original_act_file = './original_activations/%s/imagenet_2/original_activations.pt'%config.name
 
 del config
 

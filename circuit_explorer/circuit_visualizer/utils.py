@@ -5,8 +5,8 @@ import sys
 import numpy as np
 import pandas as pd
 from circuit_explorer.utils import *
-from circuit_explorer.ranks import *
-from circuit_explorer.force import *
+from circuit_explorer.score import *
+#from circuit_explorer.force import *
 import math
 from PIL import Image, ImageOps, ImageEnhance
 

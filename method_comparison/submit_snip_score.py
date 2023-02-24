@@ -1,7 +1,7 @@
 from subprocess import call
-from circuit_pruner.utils import load_config
+from circuit_explorer.utils import load_config
 
-config_file = '../configs/vgg11_config.py'
+config_file = '../configs/alexnet_sparse_config.py'
 
 config = load_config(config_file)
 layers = config.layers
@@ -15,9 +15,9 @@ print(layers)
 print(units)
 
 data_path = '../image_data/imagenet_2/'
-device = 'cuda:0'
+device = 'cuda:1'
 
-out_root = '/mnt/data/chris/nodropbox/Projects/circuit_pruner/circuit_ranks/'
+out_root = './circuit_scores/'
 
 
 

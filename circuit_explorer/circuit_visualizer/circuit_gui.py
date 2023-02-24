@@ -1,7 +1,7 @@
 import torch
-from circuit_explorer.visualizer.utils import *
-from circuit_explorer.visualizer.layouts import *
-from circuit_explorer.visualizer.featureviz import *
+from circuit_explorer.circuit_visualizer.utils import *
+from circuit_explorer.circuit_visualizer.layouts import *
+from circuit_explorer.circuit_visualizer.featureviz import *
 #from circuit_explorer.visualizer.cnn_gui import *
 from circuit_explorer.utils import *
 import os
@@ -11,7 +11,7 @@ import plotly.graph_objs as go
 import dash
 import dash_core_components as dcc
 import dash_html_components as html
-import dash_daq as daq
+#import dash_daq as daq
 from dash.exceptions import PreventUpdate
 #import utils.dash_reusable_components as drc
 import flask

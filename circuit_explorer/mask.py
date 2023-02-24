@@ -23,7 +23,7 @@ def mask_from_scores(scores, sparsity=None,num_params_to_keep=None,model = None,
 	'''
 	assert not ((sparsity is None) and (num_params_to_keep is None))
 
-	keep_masks = {}
+	keep_masks = OrderedDict()
 	
 	#flatten
 	scores_flat = torch.cat([torch.flatten(x) for x in scores.values()])
@@ -125,6 +125,60 @@ def expand_structured_mask(mask,model):
 		expanded_mask[layer_name] = m
 	
 	return expanded_mask
+
+
+def structured_mask_from_mask(mask, structure = 'kernels'):
+	
+	if isinstance(mask,dict):
+		layer_keys = list(mask.keys())
+		mask_list = []
+		for i in mask:
+			mask_list.append(mask[i])
+		mask = mask_list
+
+	if structure == 'weights':
+		raise ValueError("to create a weight mask use the function circuit_pruner.force.expand_structured_mask")
+	if structure not in ['kernels','edges','filters','nodes']:
+		raise ValueError("Argument 'structure' must be in ['weights','kernels','edges','filters','nodes']")
+
+
+
+	if len(mask[0].shape) == 4:
+		in_structure = 'weights'
+	elif len(mask[0].shape) == 2:
+		in_structure = 'kernels'
+	elif len(mask[0].shape) == 1:
+		in_structure = 'filters'
+	else:
+		raise ValueError("Dont understand Shape %s of input mask, must be 1,2 or 4 (filters,kernels,weights)"%str(len(mask[0].shape)))
+
+	if in_structure == structure:
+		print('provided mask already of structure %s'%structure)
+		return mask
+
+	out_mask = []
+
+	for m in mask:
+		if structure in ['filters','nodes']:
+			m_flat = torch.reshape(m,(m.shape[0],-1))
+			z = torch.zeros(m_flat.shape[1])
+			m_out = ~torch.all(m_flat==z,dim=1)
+
+		else:
+			m_flat = torch.reshape(m,(m.shape[0]*m.shape[1],-1))
+			z = torch.zeros(m_flat.shape[1])
+			m_out = ~torch.reshape(torch.all(m_flat==z,dim=1),(m.shape[0],m.shape[1]))
+
+		m_out= m_out.type(torch.FloatTensor)
+		out_mask.append(m_out)
+
+
+	out_mask_dict = OrderedDict()
+	for i in range(len(out_mask)):
+		out_mask_dict[layer_keys[i]] = out_mask[i]
+
+	return out_mask
+
 
 
 

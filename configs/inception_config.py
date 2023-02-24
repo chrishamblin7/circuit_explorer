@@ -56,10 +56,10 @@ layers = ['mixed4a_5x5_pre_relu_conv','mixed4a_1x1_pre_relu_conv','mixed4a_3x3_p
 units = range(20)
 
 #GPU
-device = 'cuda:0'
+device = 'cuda:2'
 
 
 #AUX 
 num_workers = 4     #num workers argument in dataloader
 seed = 2            #manual seed
-batch_size = 128   #batch size for feeding rank image set through model (input image set is sent through all at once)
+batch_size = 1   #batch size for feeding rank image set through model (input image set is sent through all at once)

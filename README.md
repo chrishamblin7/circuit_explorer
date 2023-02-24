@@ -15,4 +15,6 @@ Install dependencies: `pip install -r requirements.txt`
 
 Add the circuit_explorer package itself: `pip install -e .`
 
+And if you want to use the software in jupyter notebooks `python -m ipykernel install --user --name=circuit_explorer`
+
 ## Tutorials with Colab Notebooks

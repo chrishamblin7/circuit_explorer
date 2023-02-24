@@ -6,15 +6,15 @@ from collections import OrderedDict
 import numpy as np
 import time
 import os
-from circuit_pruner.utils import load_config
-from circuit_pruner.data_loading import rank_image_data
+from circuit_explorer.utils import load_config
+from circuit_explorer.data_loading import rank_image_data
 
 ##DATA LOADER###
 import torch.utils.data as data
 import torchvision.datasets as datasets
-from circuit_pruner.data_loading import rank_image_data
+from circuit_explorer.data_loading import rank_image_data
 from copy import deepcopy
-from circuit_pruner.simple_api.score import actgrad_kernel_score
+from circuit_explorer.simple_api.score import actgrad_kernel_score
 
 
 

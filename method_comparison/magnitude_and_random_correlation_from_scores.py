@@ -4,14 +4,14 @@ from PIL import Image
 from collections import OrderedDict
 import numpy as np
 import os
-from circuit_pruner.utils import load_config
-from circuit_pruner.data_loading import rank_image_data
+from circuit_explorer.utils import load_config
+from circuit_explorer.data_loading import rank_image_data
 from torchvision import transforms
 from torch.utils.data import DataLoader
 from torchvision.datasets import ImageFolder
-from circuit_pruner.simple_api.mask import mask_from_scores, apply_mask,setup_net_for_mask
-from circuit_pruner.simple_api.target import feature_target_saver, sum_abs_loss
-from circuit_pruner.simple_api.score import magnitude_scores_from_scores, random_scores_from_scores
+from circuit_explorer.simple_api.mask import mask_from_scores, apply_mask,setup_net_for_mask
+from circuit_explorer.simple_api.target import feature_target_saver, sum_abs_loss
+from circuit_explorer.simple_api.score import magnitude_scores_from_scores, random_scores_from_scores
 from time import time
 import pickle
 
@@ -20,12 +20,12 @@ import pickle
 name = 'inception'
 dataset_name = 'imagenet_2'
 config_file = '../configs/%s_config.py'%name
-snip_scores_folder = '/mnt/data/chris/nodropbox/Projects/circuit_pruner/circuit_scores/%s/%s/snip/'%(name,dataset_name)
-out_folder_root = '/mnt/data/chris/nodropbox/Projects/circuit_pruner/correlations/'
+snip_scores_folder = '/mnt/data/chris/nodropbox/Projects/circuit_explorer/circuit_scores/%s/%s/snip/'%(name,dataset_name)
+out_folder_root = '/mnt/data/chris/nodropbox/Projects/circuit_explorer/correlations/'
 device = 'cuda:2'
 batch_size = 40
 sparsities = [.9,.8,.7,.6,.5,.4,.3,.2,.1,.05,.01,.005,.001]
-original_activations_file = '/mnt/data/chris/nodropbox/Projects/circuit_pruner/original_activations/%s/%s/original_activations.pt'%(name,dataset_name)
+original_activations_file = '/mnt/data/chris/nodropbox/Projects/circuit_explorer/original_activations/%s/%s/original_activations.pt'%(name,dataset_name)
 save_activations = False
 structure = 'kernels'
 score_kinds = ['magnitude'] #choices are magnitude and random
