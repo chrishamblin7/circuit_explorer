@@ -48,10 +48,7 @@ def mask_from_scores(scores, sparsity=None,num_params_to_keep=None,model = None,
 
 	
 	if acceptable_score == 0:
-		print('gradients from this feature are sparse,\
-			   the minimum acceptable score at this sparsity has a score of zero! \
-				we will return a mask thats smaller than you asked, by masking all \
-				parameters with a score of zero.')
+		print('gradients from this feature are sparse, the minimum acceptable score at this sparsity has a score of zero! we will return a mask thats smaller than you asked, by masking all parameters with a score of zero.')
 
 	for layer_name in scores:
 		layer_scores = scores[layer_name]

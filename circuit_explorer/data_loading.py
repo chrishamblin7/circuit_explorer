@@ -30,8 +30,6 @@ default_preprocess =  transforms.Compose([
                                 default_normalize])
 
 
-
-
 def single_image_loader(image_path, transform=default_preprocess, label_file_path = None, label_dict_path = None, rgb=False):
 	img_name = image_path.split('/')[-1].split('.')[:-1]
 	if not transform:
@@ -158,18 +156,23 @@ class simple_data(Dataset):
 		else:
 			return (self.data[idx],int(self.target[idx]))
 
-
-
-
 class rank_image_data(Dataset):
 
-	def __init__(self, root_dir, transform=default_preprocess, label_file_path = None, label_dict_path = None, class_folders=False,return_image_name=False,rgb=False ):
+	def __init__(self, root_dir, transform=default_preprocess, label_file_path = None, label_dict_path = None, class_folders=False,select_folders = None,return_image_name=False,rgb=False ):
 		
 		
 		self.root_dir = root_dir
 		self.class_folders = class_folders
 		self.return_image_name = return_image_name
-		if not self.class_folders:
+
+		if select_folders is not None:
+			self.img_names = []
+			self.classes = select_folders
+			for cl in self.classes:
+				files = os.listdir(self.root_dir+'/'+cl)
+				full_names = [cl+'/'+s for s in files]
+				self.img_names += full_names
+		elif not self.class_folders:
 			self.img_names = os.listdir(self.root_dir)
 			self.img_names.sort()
 		else:

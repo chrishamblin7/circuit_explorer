@@ -10,6 +10,7 @@ from collections import OrderedDict
 from circuit_explorer.utils import TargetReached
 from circuit_explorer.data_loading import rank_image_data
 from torch.utils.data import DataLoader
+from circuit_explorer.utils import convert_relu_layers
 import types
 from copy import deepcopy
 
@@ -87,6 +88,7 @@ class multi_feature_target_saver(nn.Module):
     def __init__(self, model, targets, kill_forward = True):
         super().__init__()
         self.model = model
+        convert_relu_layers(model)
         self.targets = targets
         self.target_activations = {}
         #self.layer = OrderedDict([*self.model.named_modules()])[layer]
