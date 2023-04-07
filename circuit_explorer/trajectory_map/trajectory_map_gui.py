@@ -19,8 +19,8 @@ from circuit_explorer.mask import setup_net_for_mask, mask_from_scores, apply_ma
 from circuit_explorer.utils import params_2_target_from_scores, convert_relu_layers
 from circuit_explorer.score import actgrad_filter_score, actgrad_kernel_score, get_num_params_from_cum_score, snip_score
 from circuit_explorer.data_loading import single_image_data, default_preprocess
-from lucent_video.optvis import render, param, transform, objectives
-from lucent_video.optvis.render_video import render_accentuation
+from lucent_circuit.optvis import render, param, transform, objectives
+from lucent_circuit.optvis.render_video import render_accentuation
 from circuit_explorer.dissected_Conv2d import dissect_model
 #make relus not inplace, important visualizing negative activations for example
 from circuit_explorer.receptive_fields import position_crop_image,receptive_field

@@ -22,96 +22,99 @@ class TargetReached(ModelBreak):
 	"""Raised when the output target for a subgraph is reached, so the model doesnt neeed to be run forward any farther"""
 	pass  
 
+def get_layers_from_model(model):
+	layers = OrderedDict([*model.named_modules()])
+	return layers
 
 def params_2_target_from_scores(scores,unit,target_layer_name,model):
-    #total params
-    all_layers = OrderedDict([*model.named_modules()])
+	#total params
+	all_layers = OrderedDict([*model.named_modules()])
 
-    total_params = 0
-    for layer_name, layer_scores in scores.items():
-        layer = all_layers[layer_name]
-        if layer_name == target_layer_name or layer_name == next(reversed(scores)): #not all weights matter, only those leading to target
-            if isinstance(unit,int):
-                dims = 1
-            else:
-                dims = torch.sum(torch.tensor(unit) != 0)
-            #EDIT this might not be general
-            total_params += int(torch.numel(layer.weight)/layer.weight.shape[0]*dims) 
-        else:
-            total_params += torch.numel(layer_scores)
+	total_params = 0
+	for layer_name, layer_scores in scores.items():
+		layer = all_layers[layer_name]
+		if layer_name == target_layer_name or layer_name == next(reversed(scores)): #not all weights matter, only those leading to target
+			if isinstance(unit,int):
+				dims = 1
+			else:
+				dims = torch.sum(torch.tensor(unit) != 0)
+			#EDIT this might not be general
+			total_params += int(torch.numel(layer_scores)*(dims/layer.weight.shape[0]))
+		else:
+			total_params += torch.numel(layer_scores)
 
-    return total_params
+	return total_params
 
 def params_2_target_in_layer(unit,layer):
-    '''
-    how many parameters in the target layer actually attach to the target?
-    Useful for getting relevant sparsity measure
-    EDIT: Is this really general? Does it work with a branching layer for example?
-    '''
-    if isinstance(unit,int):
-        dims = 1
-    else:
-        dims = torch.sum(torch.tensor(unit) != 0)
-    return int(torch.numel(layer.weight)/layer.weight.shape[0]*dims)   
+	'''
+	how many parameters in the target layer actually attach to the target?
+	Useful for getting relevant sparsity measure
+	EDIT: Is this really general? Does it work with a branching layer for example?
+	'''
+	if isinstance(unit,int):
+		dims = 1
+	else:
+		dims = torch.sum(torch.tensor(unit) != 0)
+	return int(torch.numel(layer.weight)/layer.weight.shape[0]*dims)   
 
 def get_layers(model, parent_name='', layer_info=[]):
-    for module_name, module in model.named_children():
-        layer_name = parent_name + '.' + module_name
-        if len(list(module.named_children())):
-            layer_info = get_layers(module, layer_name, layer_info=layer_info)
-        else:
-            layer_info.append(layer_name.strip('.'))
-    
-    return layer_info
+	for module_name, module in model.named_children():
+		layer_name = parent_name + '.' + module_name
+		if len(list(module.named_children())):
+			layer_info = get_layers(module, layer_name, layer_info=layer_info)
+		else:
+			layer_info.append(layer_name.strip('.'))
+	
+	return layer_info
 
 def get_layer_names(model):
-    return get_layers(model, parent_name='', layer_info=[])
+	return get_layers(model, parent_name='', layer_info=[])
 
 def get_layer_type(model, layer_name):
-    for name,m in list(model.named_modules()):
-        if name == layer_name: return m.__class__.__name__
-            
+	for name,m in list(model.named_modules()):
+		if name == layer_name: return m.__class__.__name__
+			
 def convert_relu_layers(model):
   #name should be the module name according to the 'OrderedDict([*model.named_modules()])' method ("." nesting)
   #useful for doing things like changing a relu to 'inplace'
 
-    # recursive function to get layers
-    def get_layers(module):
-        if hasattr(module, "_modules"):
-            for name, layer in module._modules.items():
-                if layer is None:
-                    # e.g. GoogLeNet's aux1 and aux2 layers
-                    continue
-                if isinstance(layer, nn.ReLU):
-                  layer = nn.ReLU(inplace=False)
-                  setattr(module, name, nn.ReLU(inplace=False))
-                
-                setattr(module, name, layer)
-                get_layers(layer)
+	# recursive function to get layers
+	def get_layers(module):
+		if hasattr(module, "_modules"):
+			for name, layer in module._modules.items():
+				if layer is None:
+					# e.g. GoogLeNet's aux1 and aux2 layers
+					continue
+				if isinstance(layer, nn.ReLU):
+				  layer = nn.ReLU(inplace=False)
+				  setattr(module, name, nn.ReLU(inplace=False))
+				
+				setattr(module, name, layer)
+				get_layers(layer)
 
-    get_layers(model)
+	get_layers(model)
 
 
 def inplace_model_edit(model, target_name, new_module):
   #name should be the module name according to the 'OrderedDict([*model.named_modules()])' method ("." nesting)
   #useful for doing things like changing a relu to 'inplace'
 
-    # recursive function to get layers
-    def get_layers(module, prefix=[]):
-        if hasattr(module, "_modules"):
-            for name, layer in module._modules.items():
-                if layer is None:
-                    # e.g. GoogLeNet's aux1 and aux2 layers
-                    continue
-                full_name = ".".join(prefix+[name])
-                if full_name == target_name:
-                  layer = new_module
-                  setattr(module, name, new_module)
-                
-                setattr(module, name, layer)
-                get_layers(layer, prefix=prefix+[name])
+	# recursive function to get layers
+	def get_layers(module, prefix=[]):
+		if hasattr(module, "_modules"):
+			for name, layer in module._modules.items():
+				if layer is None:
+					# e.g. GoogLeNet's aux1 and aux2 layers
+					continue
+				full_name = ".".join(prefix+[name])
+				if full_name == target_name:
+				  layer = new_module
+				  setattr(module, name, new_module)
+				
+				setattr(module, name, layer)
+				get_layers(layer, prefix=prefix+[name])
 
-    get_layers(model)
+	get_layers(model)
 
 
 
@@ -439,31 +442,31 @@ def color_vec_2_str(colorvec,a='1'):
 
 
 def color_string_to_list(color_string):
-    color_string = color_string[:-1] #ignore ')'
-    color_string = color_string.split('(')[-1]
-    color_string_list = color_string.split(',')
-    color_list = []
-    for i in color_string_list:
-        color_list.append(int(i))
-    return color_list
+	color_string = color_string[:-1] #ignore ')'
+	color_string = color_string.split('(')[-1]
+	color_string_list = color_string.split(',')
+	color_list = []
+	for i in color_string_list:
+		color_list.append(int(i))
+	return color_list
 
 def value_to_color_from_cscale(c,cscale,cmin,cmax):
-    #interpolate colors 
-    #transform act between 0-1
-    norm_a = 1/(cmax-cmin)*c-cmin/(cmax-cmin) #minmax norm
-    norm_a = 10*(max(min(norm_a,1.),0.)) #threshold
-    #get_bounds
-    l_bound = int(floor(norm_a))
-    u_bound = int(ceil(norm_a))
-    l_bound_col = color_string_to_list(cscale[l_bound][1])
-    u_bound_col = color_string_to_list(cscale[u_bound][1])
-    #interpolate
-    d = norm_a-floor(norm_a)
-    color = []
-    for i in range(3):
-        color.append(int(l_bound_col[i]+d*(u_bound_col[i]-l_bound_col[i])))
+	#interpolate colors 
+	#transform act between 0-1
+	norm_a = 1/(cmax-cmin)*c-cmin/(cmax-cmin) #minmax norm
+	norm_a = 10*(max(min(norm_a,1.),0.)) #threshold
+	#get_bounds
+	l_bound = int(floor(norm_a))
+	u_bound = int(ceil(norm_a))
+	l_bound_col = color_string_to_list(cscale[l_bound][1])
+	u_bound_col = color_string_to_list(cscale[u_bound][1])
+	#interpolate
+	d = norm_a-floor(norm_a)
+	color = []
+	for i in range(3):
+		color.append(int(l_bound_col[i]+d*(u_bound_col[i]-l_bound_col[i])))
 
-    return color
+	return color
 
 
 
@@ -617,34 +620,34 @@ def circuit_2_model_sparsity(circuit,model,use_kernel_sparsity=True):
 
 
 def display_image_patch_for_activation(image_path,layer_name,position,receptive_fields,simple_name=False,frame = True, save=False,image_size=(3,224,224)):
-    '''
-    image_path -> full path to image
-    layer_name -> name of reference layer for activation map (can be a layer name based on _ convention or simple 'conv1' convention)
-    position -> a tuple (w,h) of position in activation map for which image patch is the receptive field
-    simple_name -> set to true if using 'conv1' 'conv2' naming convention, False otherwise
-    '''
-    from circuit_explorer.receptive_fields import receptive_field_for_unit
-    #if simple_name:
-    #    name_dict = gen_conv_name_dict(model)
-    #    layer_name = name_dict[layer_name]
-    recep_field = receptive_field_for_unit(receptive_fields, layer_name, position)
-    
-    image = Image.open(image_path)
-    #display(image)
-    resize_2_tensor = transforms.Compose([transforms.Resize((image_size[1],image_size[2])),transforms.ToTensor()])
-    tensor_image = resize_2_tensor(image)
-    rand_tensor = torch.zeros(image_size[0],image_size[1],image_size[2])
-    cropped_tensor_image = tensor_image[:,int(recep_field[0][0]):int(recep_field[0][1]),int(recep_field[1][0]):int(recep_field[1][1])]
-    rand_tensor[:,int(recep_field[0][0]):int(recep_field[0][1]),int(recep_field[1][0]):int(recep_field[1][1])] = cropped_tensor_image
-    if frame:
-        cropped_image = transforms.ToPILImage()(rand_tensor).convert("RGB")
-    else:    
-        cropped_image = transforms.ToPILImage()(cropped_tensor_image).convert("RGB")
-    
-    if save:
-        cropped_image.save(save)
-    else:
-        display(cropped_image)
+	'''
+	image_path -> full path to image
+	layer_name -> name of reference layer for activation map (can be a layer name based on _ convention or simple 'conv1' convention)
+	position -> a tuple (w,h) of position in activation map for which image patch is the receptive field
+	simple_name -> set to true if using 'conv1' 'conv2' naming convention, False otherwise
+	'''
+	from circuit_explorer.receptive_fields import receptive_field_for_unit
+	#if simple_name:
+	#    name_dict = gen_conv_name_dict(model)
+	#    layer_name = name_dict[layer_name]
+	recep_field = receptive_field_for_unit(receptive_fields, layer_name, position)
+	
+	image = Image.open(image_path)
+	#display(image)
+	resize_2_tensor = transforms.Compose([transforms.Resize((image_size[1],image_size[2])),transforms.ToTensor()])
+	tensor_image = resize_2_tensor(image)
+	rand_tensor = torch.zeros(image_size[0],image_size[1],image_size[2])
+	cropped_tensor_image = tensor_image[:,int(recep_field[0][0]):int(recep_field[0][1]),int(recep_field[1][0]):int(recep_field[1][1])]
+	rand_tensor[:,int(recep_field[0][0]):int(recep_field[0][1]),int(recep_field[1][0]):int(recep_field[1][1])] = cropped_tensor_image
+	if frame:
+		cropped_image = transforms.ToPILImage()(rand_tensor).convert("RGB")
+	else:    
+		cropped_image = transforms.ToPILImage()(cropped_tensor_image).convert("RGB")
+	
+	if save:
+		cropped_image.save(save)
+	else:
+		display(cropped_image)
 
 
 
@@ -653,18 +656,18 @@ def display_image_patch_for_activation(image_path,layer_name,position,receptive_
 from scipy.spatial.distance import cdist
 
 def cart2pol(x, y):
-    rho = np.sqrt(x**2 + y**2)
-    phi = np.arctan2(y, x)
-    return(rho, phi)
+	rho = np.sqrt(x**2 + y**2)
+	phi = np.arctan2(y, x)
+	return(rho, phi)
 
 def pol2cart(rho, phi):
-    x = rho * np.cos(phi)
-    y = rho * np.sin(phi)
-    return(x, y)
+	x = rho * np.cos(phi)
+	y = rho * np.sin(phi)
+	return(x, y)
 
 def rotate_cartesian(vec2d,r):    #rotates 2d cartesian coordinates by some radians 
-    x,y = vec2d[0], vec2d[1]
-    x_out = np.sqrt(x**2+y**2)*np.cos(np.arctan2(y,x)+r)
-    y_out = np.sqrt(x**2+y**2)*np.sin(np.arctan2(y,x)+r)
-    return np.array([x_out,y_out])
+	x,y = vec2d[0], vec2d[1]
+	x_out = np.sqrt(x**2+y**2)*np.cos(np.arctan2(y,x)+r)
+	y_out = np.sqrt(x**2+y**2)*np.sin(np.arctan2(y,x)+r)
+	return np.array([x_out,y_out])
 

@@ -23,7 +23,7 @@ from circuit_explorer.dissected_Conv2d import *
 Functions for computing saliency scores for parameters on models
 '''
 
-def snip_score(model,dataloader,target_layer_name,unit,layer_types_2_score = [nn.Conv2d,nn.Linear],loss_f = sum_abs_loss,absolute=True):
+def snip_score(model,dataloader,target_layer_name,unit,layer_types_2_score = [nn.Conv2d,nn.Linear],loss_f = sum_abs_loss,absolute=True,use_weight_mask=False):
 
 	_ = model.eval()
 	device = next(model.parameters()).device  
@@ -53,14 +53,14 @@ def snip_score(model,dataloader,target_layer_name,unit,layer_types_2_score = [nn
 				if layer.weight.grad is None:
 					continue
 
-				try: #does the model have a weight mask?
+				if use_weight_mask: #does the model have a weight mask?
 					#scale scores by batch size (*inputs.shape)
 					if absolute:
 						layer_scores = torch.abs(layer.weight_mask.grad).detach().cpu()*inputs.shape[0]
 					else:
 						layer_scores = (layer.weight_mask.grad).detach().cpu()*inputs.shape[0]
 
-				except:
+				else:
 					if absolute:
 						layer_scores = torch.abs(layer.weight*layer.weight.grad).detach().cpu()*inputs.shape[0]
 					else:
@@ -90,11 +90,14 @@ def snip_score(model,dataloader,target_layer_name,unit,layer_types_2_score = [nn
 	return scores
 
 
-def force_score(model, dataloader,target_layer_name,unit,keep_ratio=.1, T=10, num_params_to_keep=None, structure='kernels',layer_types_2_score = [nn.Conv2d,nn.Linear],loss_f = sum_abs_loss, apply_final_mask = True, min_max=False):    #progressive skeletonization
+def force_score(model, dataloader,target_layer_name,unit,keep_ratio=.1, T=10, num_params_to_keep=None, structure='kernels',layer_types_2_score = [nn.Conv2d,nn.Linear],loss_f = sum_abs_loss, apply_final_mask = True, min_max=False,use_weight_mask=True):    #progressive skeletonization
 	'''
 	TO DO: This does not currently work with structured pruning, when target
 	is a linear layer.
+	use_weight_mask will allow for 'reviving' masked weights
 	'''
+
+
 
 	assert structure in ('weights','kernels','filters')
 
@@ -111,7 +114,7 @@ def force_score(model, dataloader,target_layer_name,unit,keep_ratio=.1, T=10, nu
 	#before getting the schedule of sparsities well get the total
 	#parameters into the target by running the scoring function once
 
-	scores = snip_score(model,dataloader,target_layer_name,unit,layer_types_2_score = layer_types_2_score, loss_f = loss_f)
+	scores = snip_score(model,dataloader,target_layer_name,unit,layer_types_2_score = layer_types_2_score, loss_f = loss_f, use_weight_mask=use_weight_mask)
 	if structure in ['kernels','filters']:
 		structured_scores = structure_scores(scores, model, structure=structure)
 	else:
@@ -162,7 +165,7 @@ def force_score(model, dataloader,target_layer_name,unit,keep_ratio=.1, T=10, nu
 		apply_mask(model,mask,zero_absent=False)
 
 		#SNIP
-		scores = snip_score(model,dataloader,target_layer_name,unit,layer_types_2_score = layer_types_2_score, loss_f = loss_f)
+		scores = snip_score(model,dataloader,target_layer_name,unit,layer_types_2_score = layer_types_2_score, loss_f = loss_f, use_weight_mask=use_weight_mask)
 		if structure in ['kernels','filters']:
 			structured_scores = structure_scores(scores, model, structure=structure)
 		else:

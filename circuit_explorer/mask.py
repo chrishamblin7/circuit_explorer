@@ -17,7 +17,7 @@ from copy import deepcopy
 Functions for masking the network, given scores
 '''
 
-def mask_from_scores(scores, sparsity=None,num_params_to_keep=None,model = None,unit=None,target_layer_name=None,relevant_sparsity=True):
+def mask_from_scores(scores, sparsity=None,num_params_to_keep=None,model = None,unit=None,target_layer=None,relevant_sparsity=True):
 	'''
 	relevant sparsity: the sparsity given is with respect to 'relevant' parameters
 	'''
@@ -34,8 +34,8 @@ def mask_from_scores(scores, sparsity=None,num_params_to_keep=None,model = None,
 	if not num_params_to_keep is None:
 		k = num_params_to_keep
 	elif relevant_sparsity:
-		assert not (model is None or unit is None or target_layer_name is None)
-		total_params = params_2_target_from_scores(scores,unit,target_layer_name,model)
+		assert not (model is None or unit is None or target_layer is None)
+		total_params = params_2_target_from_scores(scores,unit,target_layer,model)
 		k = int(total_params * sparsity)
 	else:
 		total_params = len(scores_flat)

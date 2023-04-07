@@ -26,7 +26,7 @@ if not os.path.exists(root_path+'/image_data/imagenet_2'):
 	from circuit_explorer.download_from_gdrive import download_from_gdrive
 	download_from_gdrive('alexnet_sparse',target = 'images')
 
-data_path =  root_path+'/image_data/imagenet_2'   #Set this to the system path for the folder containing input images you would like to see network activation maps for.
+data_path =  root_path+'/image_data/imagenet_2/'   #Set this to the system path for the folder containing input images you would like to see network activation maps for.
 
 label_file_path = root_path+'/image_data/imagenet_labels.txt'      #line seperated file with names of label classes as they appear in image names
 						  #set to None if there are no target classes for your model
@@ -51,7 +51,7 @@ layers = ['layer2.0.conv1','layer2.0.conv2','layer2.1.conv1','layer2.1.conv2',
           'layer3.0.conv1','layer3.0.conv2','layer3.1.conv1','layer3.1.conv2',
           'layer4.0.conv1','layer4.0.conv2','layer4.1.conv1','layer4.1.conv2',]  
 
-units = range(20)
+units = range(5)
 
 
 #GPU

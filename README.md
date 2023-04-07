@@ -1,20 +1,21 @@
-# CIRCUIT PRUNER
-
-
-
+# CIRCUIT EXPLORER
 
 ## Setup
 
-`git clone https://github.com/chrishamblin7/circuit_explorer.git`
-
-Enter into the downloaded git repo: `cd circuit_explorer`
-
-Create a [virtual environment](https://realpython.com/python-virtual-environments-a-primer/) for the software if you prefer.
+Create a [virtual environment](https://realpython.com/python-virtual-environments-a-primer/) for the software.
+* `python3 -m venv env`
+* `source env/bin/activate`
 
 Install dependencies: `pip install -r requirements.txt`
 
 Add the circuit_explorer package itself: `pip install -e .`
 
-And if you want to use the software in jupyter notebooks `python -m ipykernel install --user --name=circuit_explorer`
+Make the virtual environment available to jupyter notebooks:  `python -m ipykernel install --user --name=circuit_explorer`
 
-## Tutorials with Colab Notebooks
+## Tutorials with Jupyter Notebooks
+ 
+Demo Jupyter Notebooks of experiments can be found in the folder 'demo_notebooks'. 
+* `api.ipynb` : A notebook with general examples of how to use the circuit pruner API.
+* `circuit_diagram.ipynb` : A notebook for generating 'circuit diagrams'
+* `polysemantic_subcircuits.ipynb` : A notebook for the polysemantic subcircuit experiment
+* `circle_subcircuits.ipynb` : A notebook for the circle subcircuit experiment
