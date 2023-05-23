@@ -1,7 +1,6 @@
 #functions for using lucent to get visualizations
-from lucent_video.optvis import render
-from lucent_video.modelzoo.util import get_model_layers
-from lucent_video.optvis import render, param, transform, objectives
+from lucent_circuit.modelzoo.util import get_model_layers
+from lucent_circuit.optvis import render, param, transform, objectives
 
 import inspect
 import time
@@ -12,9 +11,18 @@ import sys
 #sys.path.insert(0, os.path.abspath('../prep_model_scripts/'))
 from circuit_explorer.dissected_Conv2d import *
 from circuit_explorer import root_path
+from circuit_explorer.utils import convert_relu_layers
 import random
 
 from subprocess import call
+
+from circuit_explorer.receptive_fields import receptive_field, receptive_field_for_unit
+from math import ceil, floor
+from copy import deepcopy
+from circuit_explorer.dissected_Conv2d import dissect_model
+from circuit_explorer.utils import convert_relu_layers
+from math import floor
+import numpy as np
 
 
 # def gen_visualization(model,image_name,objective,parametrizer,optimizer,transforms,image_size,neuron,params):
@@ -288,17 +296,12 @@ def fetch_deepviz_img_for_circuit(circuit,layer_name,within_id,targetid,device='
 
 
 
-def featviz_in_recep_field(model,feature_name,unit, input_dim = (3,224,224),image_name=None, margin = 10, device = 'cuda:0'):
-	from circuit_explorer.receptive_fields import receptive_field, receptive_field_for_unit
-	from math import ceil, floor
-	from lucent_fresh.optvis import render, param, transform, objectives
-	from copy import deepcopy
-	from circuit_explorer.dissected_Conv2d import dissect_model
-	from math import floor
-	import numpy as np
+def featviz_in_recep_field(model,layer,unit, input_dim = (3,224,224),image_name=None, margin = 10, device = 'cuda:0'):
 
-	dis_model = dissect_model(deepcopy(model), store_ranks = False, device=device)
-	dis_model = dis_model.to(device).eval()
+	#dis_model = dissect_model(deepcopy(model), store_ranks = False, device=device)
+	#dis_model = dis_model.to(device).eval()
+	convert_relu_layers(model)
+	#layer = layer.replace('.','_')
 
 	#all_recep_field_params = receptive_field(model.features, input_dim)
 	try:
@@ -307,10 +310,10 @@ def featviz_in_recep_field(model,feature_name,unit, input_dim = (3,224,224),imag
 		all_recep_field_params = receptive_field(model.features.to(device), input_dim)
 	
 	param_f = lambda: param.image(input_dim[1])
-	obj  = objectives.neuron(feature_name,unit)
-	viz_im = render.render_vis(dis_model,  obj, param_f, show_inline=True)
+	obj  = objectives.neuron(layer,unit)
+	viz_im = render.render_vis(model,  obj, param_f, show_inline=True)
 	
-	layer_ind = str(int(feature_name.replace('features_',''))+1)
+	layer_ind = str(int(layer.replace('features.',''))+1)
 	map_size = (all_recep_field_params[layer_ind]['output_shape'][2],all_recep_field_params[layer_ind]['output_shape'][3])
 	print(map_size)
 	if map_size[0]%2 == 0:
@@ -318,7 +321,7 @@ def featviz_in_recep_field(model,feature_name,unit, input_dim = (3,224,224),imag
 	else:
 		target_position = (int(floor(map_size[0]/2)),int(floor(map_size[1]/2)))
 	print(target_position)
-	recep_field = receptive_field_for_unit(all_recep_field_params, feature_name, target_position)
+	recep_field = receptive_field_for_unit(all_recep_field_params, layer, target_position)
 	print(recep_field)
 	viz_im = viz_im[0][:,int(recep_field[0][0])-margin:int(recep_field[0][1])+margin,int(recep_field[1][0])-margin:int(recep_field[1][1])+margin,:]
 	#viz_im = viz_im[0][:,:,:,:]

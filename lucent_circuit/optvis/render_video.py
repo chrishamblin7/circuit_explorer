@@ -17,7 +17,7 @@ def render_accentuation(img_path,
 						device = None,
                         thresholds=range(41),
 						obj_f=None,
-                        optimizer=None,  #lucent optimizer
+                        lr=1e-2,  #lucent optimizer
                         transforms=None, #lucent transforms
                         show_image=True,
                         include_noise_init=True,
@@ -25,8 +25,9 @@ def render_accentuation(img_path,
 						l1_reg=0
                         ):
   if device is None: device = next(model.parameters()).device
-  layer = layer.replace('.','_')
+  #layer = layer.replace('.','_')
   convert_relu_layers(model)
+  optimizer = lambda params: torch.optim.Adam(params, lr=lr)
   mean = .5  #mean and standard deviation derived from synthetic images
   std = .08
   transformation = torchvision.transforms.Compose([torchvision.transforms.Resize((size,size)),torchvision.transforms.ToTensor()])

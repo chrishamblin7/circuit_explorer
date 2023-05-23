@@ -14,7 +14,7 @@ import torch.utils.data as data
 import torchvision.datasets as datasets
 from circuit_explorer.data_loading import rank_image_data
 from copy import deepcopy
-from circuit_explorer.simple_api.score import actgrad_kernel_score
+from circuit_explorer.score import actgrad_kernel_score
 
 
 

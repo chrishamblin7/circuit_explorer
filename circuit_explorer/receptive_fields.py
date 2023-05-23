@@ -5,6 +5,7 @@ from torchvision import transforms
 from collections import OrderedDict
 import numpy as np
 import torch.nn.functional as F
+from circuit_explorer.target import layer_saver
 
 
 def check_same(stride):
@@ -255,26 +256,33 @@ class receptive_field_fit_transform:
 		# circle_tensor = circle_tensor.to(device)
 
 
-def recep_field_crop(image,model,layer,target_position,rf_dict = None):
+def recep_field_crop(image,model=None,layer=None,position=None,rf_dict = None,recep_field=None):
 	"""
 	inputs: a tensor image, model, layer name, and position in the layers activation map (H,W)
 	outputs: cropped image at receptive field for that image
 	"""
-	if rf_dict is None:
-		input_size = tuple(image.shape)
-		rf_dict = receptive_field(model, input_size)
-	
-	pos = receptive_field_for_unit(rf_dict, layer, target_position)
-	return image[:,int(pos[0][0]):int(pos[0][1]),int(pos[1][0]):int(pos[1][1])]
 
-def position_crop_image(image,position,layer_name,model=None,input_size=(3,224,244),rf_dict=None):
+	assert not((recep_field is None) and ((position is None) or (layer is None) or (model is None)))
+	if recep_field is None:
+		if rf_dict is None:
+			input_size = tuple(image.shape)
+			rf_dict = receptive_field(model, input_size)
+		
+		recep_field = receptive_field_for_unit(rf_dict, layer, position)
+
+	return image[:,int(recep_field[0][0]):int(recep_field[0][1]),int(recep_field[1][0]):int(recep_field[1][1])]
+
+
+def position_crop_image(image,position=None,layer_name=None,model=None,input_size=(3,224,244),rf_dict=None,recep_field=None):
 	'''
 	crops a PIL image at the receptive field for an individual unit
 	'''
-
-	if rf_dict is None:
-		#dont use nested model, for example in Alexnet pass model.features as 'model'
-		rf_dict = receptive_field(model, input_size,print_output=False)
+	#assert not((recep_field is None) and ((position is None) or (layer_name is None) or (model is None)))
+	if recep_field is None:
+		if rf_dict is None:
+			#dont use nested model, for example in Alexnet pass model.features as 'model'
+			rf_dict = receptive_field(model, input_size,print_output=False)
+		recep_field = receptive_field_for_unit(rf_dict, layer_name, position)
 	load_image =   transforms.Compose([
 									transforms.Resize((input_size[1],input_size[2])),
 									transforms.ToTensor()])
@@ -282,10 +290,38 @@ def position_crop_image(image,position,layer_name,model=None,input_size=(3,224,2
 
 	tensor_image = load_image(image)
 
-	cropped_tensor_image = recep_field_crop(tensor_image,model,layer_name,position,rf_dict = rf_dict) #function from circuit_explorer.receptive_fields
+	cropped_tensor_image = recep_field_crop(tensor_image,model,layer_name,position,recep_field = recep_field) #function from circuit_explorer.receptive_fields
 	img = topil(cropped_tensor_image)
 
 	return img
+
+
+def layer_derivative_map(model,layer,input_images = None,image_size = (3,224,224),position='middle',continuous=True,thresh=1e5):
+	device = next(model.parameters()).device 
+	if input_images is None:
+		input_images = torch.rand(10,image_size[0],image_size[1],image_size[2]).to(device)
+	input_images.requires_grad=True
+	with layer_saver(model,layer, detach=False, clone=False) as act_saver:
+		a = act_saver(input_images)[layer]
+	if position == 'middle':
+		position = (a.shape[2]//2,a.shape[2]//2)
+		
+	target = torch.sum(a[:,:,position[0],position[1]])
+	target.backward()
+	z = torch.sum(torch.abs(input_images.grad.detach().cpu()),axis=(0,1))
+	if continuous:
+		return z
+	return torch.where(z > z.mean()/thresh, 1.0, 0.0)
+	
+def derivative_receptive_field(model,layer,image_size = (3,224,224),position='middle'):
+	z = layer_derivative_map(model,layer,image_size=image_size,continuous=False).numpy()
+	non_zero_indices = np.nonzero(z)
+
+	# Get the first and last non-zero indices in both dimensions
+	x = (np.min(non_zero_indices[0]), np.max(non_zero_indices[0]))
+	y = (np.min(non_zero_indices[1]), np.max(non_zero_indices[1]))
+	return [x,y]
+
 
 	
 

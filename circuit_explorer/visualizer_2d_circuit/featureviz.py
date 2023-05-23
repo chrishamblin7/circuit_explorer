@@ -310,7 +310,7 @@ def featviz_in_recep_field(model,feature_name,unit, input_dim = (3,224,224),imag
 	obj  = objectives.neuron(feature_name,unit)
 	viz_im = render.render_vis(dis_model,  obj, param_f, show_inline=True)
 	
-	layer_ind = str(int(feature_name.replace('features_',''))+1)
+	layer_ind = str(int(feature_name.replace('features.',''))+1)
 	map_size = (all_recep_field_params[layer_ind]['output_shape'][2],all_recep_field_params[layer_ind]['output_shape'][3])
 	print(map_size)
 	if map_size[0]%2 == 0:

@@ -23,7 +23,7 @@ from lucent_circuit.optvis import render, param, transform, objectives
 from lucent_circuit.optvis.render_video import render_accentuation
 from circuit_explorer.dissected_Conv2d import dissect_model
 #make relus not inplace, important visualizing negative activations for example
-from circuit_explorer.receptive_fields import position_crop_image,receptive_field
+from circuit_explorer.receptive_fields import position_crop_image,receptive_field, derivative_receptive_field
 
 #plotting
 import plotly.express as px
@@ -49,12 +49,16 @@ def add_border_to_PIL_image(img,c,cscale,cmin,cmax,ratio=10):
     return new_img
 
 
-def image_path_to_base64(im_path,layer,pos=None,size = (default_input_size[1],default_input_size[2]),rf_dict=None,boundary_data=None):
+def image_path_to_base64(im_path,layer=None,pos=None,size = (default_input_size[1],default_input_size[2]),rf_dict=None,recep_field=None,boundary_data=None):
     img = Image.open(im_path)
-    if pos is not None:
-        img = position_crop_image(img,pos,layer,rf_dict=rf_dict)
+
+    if recep_field is None:
+        if pos is not None:
+            img = position_crop_image(img,pos,layer,rf_dict=rf_dict)
+        else:
+            img = img.resize(size)
     else:
-        img = img.resize(size)
+        img = position_crop_image(img,recep_field=recep_field)
     if boundary_data is not None:
         img = add_border_to_PIL_image(img,
                                     boundary_data['c'],
@@ -69,11 +73,14 @@ def image_path_to_base64(im_path,layer,pos=None,size = (default_input_size[1],de
     return im_url
 
 
-def pil_image_to_base64(img,layer,pos=None,size = (default_input_size[1],default_input_size[2]),rf_dict=None,boundary_data=None):
-    if pos is not None:
-        img = position_crop_image(img,pos,layer,rf_dict=rf_dict)
+def pil_image_to_base64(img,layer=None,pos=None,size = (default_input_size[1],default_input_size[2]),rf_dict=None,recep_field=None,boundary_data=None):
+    if recep_field is None:
+        if pos is not None:
+            img = position_crop_image(img,pos,layer,rf_dict=rf_dict)
+        else:
+            img = img.resize(size)
     else:
-        img = img.resize(size)
+        img = position_crop_image(img,recep_field=recep_field)
     if boundary_data is not None:
         img = add_border_to_PIL_image(img,
                                     boundary_data['c'],
@@ -87,7 +94,7 @@ def pil_image_to_base64(img,layer,pos=None,size = (default_input_size[1],default
     return im_url
 
 
-def umap_fig_from_df(df,data_folder=None,layer=None,normed=False,norm_column = 'l1_norm',align_df=None,num_display_images=50,act_column = None,color_std=None,show_colorscale=True,rf_dict=None,image_boundary=True):
+def umap_fig_from_df(df,data_folder=None,layer=None,normed=False,norm_column = 'l1_norm',align_df=None,num_display_images=50,act_column = None,color_std=None,show_colorscale=True,rf_dict=None,recep_field=None,image_boundary=True):
     '''
     df: a umap df
     data_folder: path to images
@@ -172,7 +179,7 @@ def umap_fig_from_df(df,data_folder=None,layer=None,normed=False,norm_column = '
     if (data_folder is not None) and num_display_images>0:
         
         #select images far apart
-        pts2D = np.swapaxes(np.array([list(df['x']),list(df['y'])]),0,1)
+        pts2D = np.swapaxes(np.array([list(df['x'+xy_addition]),list(df['y'+xy_addition])]),0,1)
         kmeans = KMeans(n_clusters=num_display_images, random_state=0).fit(pts2D)
         labels = kmeans.predict(pts2D)
         cntr = kmeans.cluster_centers_
@@ -201,7 +208,7 @@ def umap_fig_from_df(df,data_folder=None,layer=None,normed=False,norm_column = '
             img = image_path_to_base64(data_folder+'/'+df.iloc[i]['image'],
                                        layer,pos=position,
                                        size = (default_input_size[1],default_input_size[2]),
-                                       rf_dict=rf_dict,boundary_data=boundary_data)
+                                       rf_dict=rf_dict,recep_field=recep_field,boundary_data=boundary_data)
             #img = Image.open(data_folder+'/'+df.iloc[i]['image']) 
             fig.add_layout_image(
                                 dict(
@@ -228,11 +235,19 @@ def umap_fig_from_df(df,data_folder=None,layer=None,normed=False,norm_column = '
 
 
 
-def full_app_from_df(df,data_folder,model,layer,unit,normed=False,norm_column='l1_norm', align_df = None,max_images=200,image_order=None,use_kernels=True,preprocess=default_preprocess,input_size=default_input_size,image_boundary=True):
+def full_app_from_df(df,data_folder,model,layer,unit,normed=False,norm_column='l1_norm', align_df = None,max_images=200,image_order=None,use_kernels=True,preprocess=default_preprocess,input_size=default_input_size,image_boundary=True,derivative_recep_field=False):
     device = next(model.parameters()).device 
     convert_relu_layers(model)
 
-    rf_dict = receptive_field(model, input_size, print_output=False)
+    if derivative_recep_field:
+        #This cannot accomodate multiple receptive fields in the DataFrame!!!
+        use_recep_field = True
+        rf_dict=None
+    else:
+        rf_dict = receptive_field(model, input_size, print_output=False)
+        use_recep_field = False
+        recep_field=None
+
 
     use_position = False
     if 'position' in df.columns:
@@ -249,9 +264,13 @@ def full_app_from_df(df,data_folder,model,layer,unit,normed=False,norm_column='l
     top_row_pos = None
     if use_position:
         top_row_pos = top_row['position']
-    start_image = image_path_to_base64(data_folder+top_row['image'],layer,pos=top_row_pos,rf_dict=rf_dict)
+        if use_recep_field:
+            recep_field = derivative_receptive_field(model,layer,image_size = (3,224,224),position=top_row_pos)
+            
 
-    umap_fig = umap_fig_from_df(df,layer=layer,normed=normed, align_df=align_df,rf_dict=rf_dict,norm_column=norm_column)
+    start_image = image_path_to_base64(data_folder+top_row['image'],layer,pos=top_row_pos,rf_dict=rf_dict,recep_field=recep_field)
+
+    umap_fig = umap_fig_from_df(df,layer=layer,normed=normed, align_df=align_df,rf_dict=rf_dict,recep_field=recep_field,norm_column=norm_column)
     
     xy_addition = ''
     if normed:
@@ -260,7 +279,7 @@ def full_app_from_df(df,data_folder,model,layer,unit,normed=False,norm_column='l
     if image_order is None:
         #image order
         #select images far apart
-        pts2D = np.swapaxes(np.array([list(df['x']),list(df['y'])]),0,1)
+        pts2D = np.swapaxes(np.array([list(df['x'+xy_addition]),list(df['y'+xy_addition])]),0,1)
         kmeans = KMeans(n_clusters=max_images, random_state=0).fit(pts2D)
         labels = kmeans.predict(pts2D)
         cntr = kmeans.cluster_centers_
@@ -287,7 +306,7 @@ def full_app_from_df(df,data_folder,model,layer,unit,normed=False,norm_column='l
         img = image_path_to_base64(data_folder+'/'+df.iloc[i]['image'],
                                     layer,pos=position,
                                     size = (default_input_size[1],default_input_size[2]),
-                                    rf_dict=rf_dict,boundary_data=boundary_data)
+                                    rf_dict=rf_dict,recep_field=recep_field,boundary_data=boundary_data)
         #img = Image.open(data_folder+'/'+df.iloc[i]['image']) 
         all_layout_images.append(
                                     dict(
@@ -397,7 +416,7 @@ def full_app_from_df(df,data_folder,model,layer,unit,normed=False,norm_column='l
             position = df_row['position']
         
         img_path = data_folder+'/'+df_row['image']
-        img_src = image_path_to_base64(img_path,layer,pos=position,rf_dict=rf_dict)
+        img_src = image_path_to_base64(img_path,layer,pos=position,rf_dict=rf_dict,recep_field=recep_field)
         act = round(df_row['activation'],3)
         norm = round(df_row[norm_column],3)
 
@@ -448,11 +467,11 @@ def full_app_from_df(df,data_folder,model,layer,unit,normed=False,norm_column='l
                                     shuffle=False
                                     )
             if pruning_type == 'weights':
-                scores = snip_score(model,dataloader,layer.replace('_','.'),unit,loss_f=loss)
+                scores = snip_score(model,dataloader,layer,unit,loss_f=loss)
             elif pruning_type == 'kernels':
-                scores = actgrad_kernel_score(dis_model,dataloader,layer.replace('_','.'),unit,loss_f=loss,dissect_model=False)
+                scores = actgrad_kernel_score(dis_model,dataloader,layer,unit,loss_f=loss,dissect_model=False)
             else:
-                scores = actgrad_filter_score(model,dataloader,layer.replace('_','.'),unit,loss_f=loss)  
+                scores = actgrad_filter_score(model,dataloader,layer,unit,loss_f=loss)  
             keep_params = get_num_params_from_cum_score(scores,cum_score)
             total_params = params_2_target_from_scores(scores,unit,layer,model)
             sparsity = keep_params/total_params
@@ -468,8 +487,8 @@ def full_app_from_df(df,data_folder,model,layer,unit,normed=False,norm_column='l
                              'cscale':umap_fig.data[0]['marker']['colorscale'],
                              'cmin':umap_fig.data[0]['marker']['cmin'],
                              'cmax':umap_fig.data[0]['marker']['cmax']}
-        orig_img_src = pil_image_to_base64(orig_pil_img,layer,pos=position,rf_dict=rf_dict,boundary_data=boundary_data)
-        accent_output = render_accentuation(img_path,layer.replace('.','_'),unit,model,saturation=sat*16.,device=device,size=input_size[1],show_image=False)
+        orig_img_src = pil_image_to_base64(orig_pil_img,layer,pos=position,rf_dict=rf_dict,recep_field=recep_field,boundary_data=boundary_data)
+        accent_output = render_accentuation(img_path,layer,unit,model,saturation=sat*8.,device=device,size=input_size[1],show_image=False)
 
         data = {'images':{'orig':orig_img_src,
                         'max':{},
@@ -488,10 +507,10 @@ def full_app_from_df(df,data_folder,model,layer,unit,normed=False,norm_column='l
             accent_img_min = Image.fromarray(np.uint8(accent_tensor_img_min*255))
             noise_img_max = Image.fromarray(np.uint8(noise_tensor_img_max*255))
             noise_img_min = Image.fromarray(np.uint8(noise_tensor_img_min*255))
-            data['images']['max']['frame %s'%(str(frame))] = pil_image_to_base64(accent_img_max,layer,pos=position,rf_dict=rf_dict)
-            data['images']['min']['frame %s'%(str(frame))] = pil_image_to_base64(accent_img_min,layer,pos=position,rf_dict=rf_dict)
-            data['images']['max_noise']['frame %s'%(str(frame))] = pil_image_to_base64(noise_img_max,layer,pos=position,rf_dict=rf_dict)
-            data['images']['min_noise']['frame %s'%(str(frame))] = pil_image_to_base64(noise_img_min,layer,pos=position,rf_dict=rf_dict)
+            data['images']['max']['frame %s'%(str(frame))] = pil_image_to_base64(accent_img_max,layer,pos=position,rf_dict=rf_dict,recep_field=recep_field)
+            data['images']['min']['frame %s'%(str(frame))] = pil_image_to_base64(accent_img_min,layer,pos=position,rf_dict=rf_dict,recep_field=recep_field)
+            data['images']['max_noise']['frame %s'%(str(frame))] = pil_image_to_base64(noise_img_max,layer,pos=position,rf_dict=rf_dict,recep_field=recep_field)
+            data['images']['min_noise']['frame %s'%(str(frame))] = pil_image_to_base64(noise_img_min,layer,pos=position,rf_dict=rf_dict,recep_field=recep_field)
 
         return data
 

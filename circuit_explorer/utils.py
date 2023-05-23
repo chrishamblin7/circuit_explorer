@@ -7,7 +7,7 @@ from torch import nn
 from circuit_explorer.dissected_Conv2d import *
 from copy import deepcopy
 from collections import OrderedDict
-from math import ceil
+from math import ceil,floor
 import numpy as np
 
 from builtins import Exception
@@ -399,6 +399,14 @@ def edgename_2_singlenum(model,edgename,params):
 
 
 ### TENSORS ###
+
+def actmap_maxpos(array):
+	#expects actmap of dimensions (batch,h,w)
+	array_flat = array.view(array.shape[0], -1)
+	_, max_ind = array_flat.max(-1)
+	return torch.stack([max_ind // array.shape[-1], max_ind % array.shape[-1]], -1)
+
+
 
 def unravel_index(indices,shape):
 	r"""Converts flat indices into unraveled coordinates in a target shape.

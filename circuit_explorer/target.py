@@ -237,7 +237,7 @@ class layer_saver(nn.Module):
     
 
 
-def layer_activations_from_dataloader(layers,dataloader,model,batch_size=64):
+def layer_activations_from_dataloader(layers,dataloader,model,batch_size=64,retain=True, detach=True, clone=True):
   '''
   dataloader: can be a pytorch dataloader or simply a path to an folder with images and no subfolders
   layers: should be a single layer name or list of layer names, for keys in dict "layers = OrderedDict([*model.named_modules()])"
@@ -268,7 +268,7 @@ def layer_activations_from_dataloader(layers,dataloader,model,batch_size=64):
     #if i%int(len(dataloader)/4) == 0:
     #  print(str(i)+'/'+str(len(dataloader)))
     images = data[0].to(device)
-    with layer_saver(model, layers) as extractor:
+    with layer_saver(model, layers, retain=retain, detach=detach, clone=clone) as extractor:
       batch_layer_activations = extractor(images) #all features for layer and all images in batch
       for i in layers:
         layer_activations[i].append(batch_layer_activations[i].detach().to('cpu'))

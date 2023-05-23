@@ -11,7 +11,8 @@ import pickle
 from torch.utils.data import Dataset, DataLoader
 from random import randint
 from torchvision.datasets import ImageFolder
-
+import os
+import glob
 
 #models except certain image standarization
 default_normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
@@ -270,4 +271,36 @@ def order_target(target,order_file):
 	else:
 		sys.exit('target has incompatible shape for reordering: %s'%str(target.shape))
 
+
+def gen_image_folder_subset(orig_path, out_path, folder_list, num_images, preserve_folders=False):
+    # Make sure output directory exists
+    if not os.path.exists(out_path):
+        os.makedirs(out_path)
+        
+    for folder in folder_list:
+        orig_folder_path = os.path.join(orig_path, folder)
+        
+        # Make sure original folder exists
+        if not os.path.exists(orig_folder_path):
+            print(f"Folder {folder} does not exist under {orig_path}. Skipping...")
+            continue
+        
+        # Extend glob to multiple image formats
+        image_files = []
+        for ext in ['jpg', 'jpeg', 'JPEG', 'png']:
+            image_files.extend(glob.glob(os.path.join(orig_folder_path, f"*.{ext}")))
+
+        # Limit to the required number of images
+        image_files = image_files[:num_images]
+
+        if preserve_folders:
+            new_folder_path = os.path.join(out_path, folder)
+            if not os.path.exists(new_folder_path):
+                os.makedirs(new_folder_path)
+        else:
+            new_folder_path = out_path
+            
+        for image_file in image_files:
+            # create symbolic link
+            os.symlink(image_file, os.path.join(new_folder_path, os.path.basename(image_file)))
 

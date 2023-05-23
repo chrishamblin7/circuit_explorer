@@ -44,13 +44,13 @@ def render_vis(
     show_inline=True,
     fixed_image_size=None,
     start_params = None,
+    magic = 4.,
     return_loss = False,
     device='cuda:0'
 ):
-    convert_relu_layers(model)
-
+    #convert_relu_layers(model)
     if param_f is None:
-        param_f = lambda: param.image(128,start_params=start_params,device=device)
+        param_f = lambda: param.image(128,start_params=start_params,magic=magic,device=device)
     # param_f is a function that should return two things
     # params - parameters to update, which we pass to the optimizer
     # image_f - a function that returns an image as a tensor
@@ -217,7 +217,7 @@ def hook_model(model, image_f):
                 if layer is None:
                     # e.g. GoogLeNet's aux1 and aux2 layers
                     continue
-                features["_".join(prefix + [name])] = ModuleHook(layer)
+                features[".".join(prefix + [name])] = ModuleHook(layer)
                 hook_layers(layer, prefix=prefix + [name])
 
     hook_layers(model)
