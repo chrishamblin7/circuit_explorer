@@ -17,7 +17,7 @@ from copy import deepcopy
 Functions for masking the network, given scores
 '''
 
-def mask_from_scores(scores, sparsity=None,num_params_to_keep=None,model = None,unit=None,target_layer=None,relevant_sparsity=True):
+def mask_from_scores(scores, sparsity=None,num_params_to_keep=None,model = None,unit=None,target_layer=None,relevant_sparsity=True,flip_mask=False):
 	'''
 	relevant sparsity: the sparsity given is with respect to 'relevant' parameters
 	'''
@@ -52,8 +52,13 @@ def mask_from_scores(scores, sparsity=None,num_params_to_keep=None,model = None,
 
 	for layer_name in scores:
 		layer_scores = scores[layer_name]
-		keep_masks[layer_name] = (layer_scores / norm_factor > acceptable_score).float()
+		if flip_mask:
+			keep_masks[layer_name] = 1 - (layer_scores / norm_factor > acceptable_score).float()
+		else:
+			keep_masks[layer_name] = (layer_scores / norm_factor > acceptable_score).float()
 	
+
+
 	return keep_masks
 
 

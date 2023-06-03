@@ -2,10 +2,11 @@ import torchvision
 from lucent_circuit.optvis import render, param, transform, objectives
 from PIL import Image
 import torch
-from circuit_explorer.mask import setup_net_for_mask
+from circuit_explorer.mask import setup_net_for_mask,mask_from_scores,apply_mask
 from circuit_explorer.utils import convert_relu_layers
 from collections import OrderedDict
 import numpy as np
+from math import floor, ceil, exp, log
 
 def render_accentuation(img_path,
                         layer,

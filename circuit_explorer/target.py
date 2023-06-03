@@ -23,7 +23,7 @@ class feature_target_saver(nn.Module):
         layer: str name of layer, use "dict([*self.model.named_modules()])"
         unit: int or list/array the length of the out features dim of the layer (specifying coefficients)
 
-        with feature_target_saver(model, layer_name) as target_saver:
+        with feature_target_saver(model, layer,unit) as target_saver:
             ... run images through model
     '''
     def __init__(self, model, layer, unit, kill_forward = True):
@@ -61,7 +61,6 @@ class feature_target_saver(nn.Module):
 
             self.target_activations = target_activations
 
-            #import pdb; pdb.set_trace()
 
             if self.kill_forward:
                 #print('feature target in %s reached.'%self.layer)
@@ -307,13 +306,15 @@ class positional_loss(nn.Module):
     position should be (H,W)
     target should be (batch,H,W) (channel already selected)
     '''
-    def __init__(self, position, loss_func = sum_abs_loss):
+    def __init__(self, position='middle', loss_func = sum_abs_loss):
         super().__init__()
         self.position = position
         self.loss_func = loss_func
 
     def forward(self,target):
         #return target[:,self.position[0],self.position[1]].mean(dim=0)
+        if self.position == 'middle':
+            return self.loss_func(target[:,target.shape[1]//2,target.shape[2]//2])
         return self.loss_func(target[:,self.position[0],self.position[1]])
     
 class distance_2_target_loss(nn.Module):

@@ -29,6 +29,10 @@ def snip_score(model,dataloader,target_layer_name,unit,layer_types_2_score = [nn
 	device = next(model.parameters()).device  
 	layers = OrderedDict([*model.named_modules()])
 
+
+	if isinstance(dataloader,torch.Tensor):
+		dataloader = [(dataloader,torch.tensor(9999999))]
+		
 	#target_saver = feature_target_saver(model,layer_name,unit)
 	scores = OrderedDict()
 	with feature_target_saver(model,target_layer_name,unit) as target_saver:
@@ -214,6 +218,9 @@ def actgrad_kernel_score(model,dataloader,target_layer_name,unit,loss_f = sum_ab
 		if isinstance(layer,dissected_Conv2d):
 			dissected_layers[layer_name] = layer
 
+	if isinstance(dataloader,torch.Tensor):
+		dataloader = [(dataloader,torch.tensor(9999999))]
+
 	#target_saver = feature_target_saver(model,layer_name,unit)
 	scores = OrderedDict()
 	with feature_target_saver(dis_model,target_layer_name,unit) as target_saver:
@@ -351,6 +358,9 @@ class actgrad_filter_extractor(nn.Module):
 
 
 def actgrad_filter_score(model,dataloader,target_layer_name,unit,loss_f=sum_abs_loss, absolute=True,return_target=False,relu=False,score_type = 'actgrad'):
+	'''
+	dataloader: pytorch dataloader or simply torch tensor (input)
+	'''
 	all_layers = OrderedDict([*model.named_modules()])
 	scoring_layers = []
 	for layer in all_layers:
@@ -364,6 +374,10 @@ def actgrad_filter_score(model,dataloader,target_layer_name,unit,loss_f=sum_abs_
 	
 	scores = OrderedDict()
 	
+	if isinstance(dataloader,torch.Tensor):
+		dataloader = [(dataloader,torch.tensor(9999999))]
+
+
 	
 	overall_loss = 0
 	with feature_target_saver(model,target_layer_name,unit) as target_saver:
