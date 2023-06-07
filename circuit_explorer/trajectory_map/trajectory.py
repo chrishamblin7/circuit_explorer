@@ -25,12 +25,13 @@ def umap_from_scores(scores,layers='all',norm_data=False,n_components=2):
 	if isinstance(layers,str):
 		layers = [layers]
 
-	data = []
+	trajectories = []
 	l1_norms = []
 	l2_norms = []
 	entropies = []
 	for sample in scores:
-		layerwise_traj_v = [t.flatten() for t in sample.values()]
+		sample_sel = {k: sample[k] for k in layers}
+		layerwise_traj_v = [t.flatten() for t in sample_sel.values()]
 		traj_v = torch.cat(layerwise_traj_v)
 		probabilities = softmax(traj_v, dim=0)
 		entropy = -(probabilities * torch.log(probabilities)).sum()
@@ -40,12 +41,14 @@ def umap_from_scores(scores,layers='all',norm_data=False,n_components=2):
 
 		if norm_data:
 			traj_v = list(nn.functional.normalize(traj_v,dim=0))
-		data.append(traj_v) 
+		else:
+			traj_v = list(traj_v)
+		trajectories.append(traj_v) 
 
-	data = np.array(data)
-	mapper = umap.UMAP(n_components=n_components).fit(data)
+	trajectories = np.array(trajectories)
+	mapper = umap.UMAP(n_components=n_components).fit(trajectories)
 		
-	out_data = mapper.fit_transform(data)
+	out_data = mapper.fit_transform(trajectories)
 	return out_data,l1_norms,l2_norms,entropies
 
 
@@ -116,7 +119,7 @@ def gen_image_trajectory_map_df(data_folder,model,target_layer,unit,score_type='
 																batch_size=1,
 																shuffle=False
 																)
-				if position in d.keys():
+				if 'position' in d.keys():
 					position = d['position']
 					loss_func = positional_loss(position)
 				else:

@@ -235,23 +235,28 @@ def umap_fig_from_df(df,data_folder=None,layer=None,normed=False,norm_column = '
 
 
 
-def full_app_from_df(df,data_folder,model,layer,unit,normed=False,norm_column='l1_norm', align_df = None,max_images=200,image_order=None,use_kernels=True,preprocess=default_preprocess,input_size=default_input_size,image_boundary=True,derivative_recep_field=False):
+def full_app_from_df(df,data_folder,model,layer,unit,normed=False,norm_column='l1_norm', align_df = None,max_images=200,image_order=None,use_kernels=True,preprocess=default_preprocess,input_size=default_input_size,image_boundary=True,derivative_recep_field=False,color_std=None):
     device = next(model.parameters()).device 
     convert_relu_layers(model)
-
-    if derivative_recep_field:
-        #This cannot accomodate multiple receptive fields in the DataFrame!!!
-        use_recep_field = True
-        rf_dict=None
-    else:
-        rf_dict = receptive_field(model, input_size, print_output=False)
-        use_recep_field = False
-        recep_field=None
 
 
     use_position = False
     if 'position' in df.columns:
         use_position = True
+
+    if use_position:
+        if derivative_recep_field:
+            #This cannot accomodate multiple receptive fields in the DataFrame!!!
+            use_recep_field = True
+            rf_dict=None
+        else:
+            rf_dict = receptive_field(model, input_size, print_output=False)
+            use_recep_field = False
+            recep_field=None
+    else:
+        rf_dict=None
+        use_recep_field = False
+        recep_field=None
 
     if use_kernels:
         dis_model = dissect_model(deepcopy(model))  
@@ -270,7 +275,7 @@ def full_app_from_df(df,data_folder,model,layer,unit,normed=False,norm_column='l
 
     start_image = image_path_to_base64(data_folder+top_row['image'],layer,pos=top_row_pos,rf_dict=rf_dict,recep_field=recep_field)
 
-    umap_fig = umap_fig_from_df(df,layer=layer,normed=normed, align_df=align_df,rf_dict=rf_dict,recep_field=recep_field,norm_column=norm_column)
+    umap_fig = umap_fig_from_df(df,layer=layer,normed=normed, align_df=align_df,rf_dict=rf_dict,recep_field=recep_field,norm_column=norm_column,color_std=color_std)
     
     xy_addition = ''
     if normed:
