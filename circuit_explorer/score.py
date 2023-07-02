@@ -286,6 +286,56 @@ def actgrad_kernel_score(model,dataloader,target_layer_name,unit,loss_f = sum_ab
 	return scores
 
 
+
+from typing import Dict, Iterable, Callable
+class actgrad_extractor(nn.Module):
+    def __init__(self, model: nn.Module, layers: Iterable[str], concat=True):
+        super().__init__()
+        self.model = model
+        self.layers = layers
+        self.activations = {layer: None for layer in layers}
+        self.gradients = {layer: None for layer in layers}
+        self.concat = concat
+
+    def __enter__(self, *args):
+        #self.remove_all_hooks() 
+        self.hooks = {'forward':{},
+                      'backward':{}}   #saving hooks to variables lets us remove them later if we want
+        for layer_id in self.layers:
+            layer = dict([*self.model.named_modules()])[layer_id]
+            self.hooks['forward'][layer_id] = layer.register_forward_hook(self.save_activations(layer_id)) #execute on forward pass
+            self.hooks['backward'][layer_id] = layer.register_backward_hook(self.save_gradients(layer_id))    #execute on backwards pass      
+        return self
+
+    def __exit__(self, *args): 
+        self.remove_all_hooks()
+
+
+    def save_activations(self, layer_id: str) -> Callable:
+        def fn(module, input, output):  #register_hook expects to recieve a function with arguments like this
+            #output is what is return by the layer with dim (batch_dim x out_dim), sum across the batch dim
+            if (self.activations[layer_id] is None) or (not self.concat):
+                self.activations[layer_id] = output.detach().cpu()
+            else:
+                self.activations[layer_id] = torch.cat((self.activations[layer_id],output.detach().cpu()), dim=0)           
+        return fn
+
+    def save_gradients(self, layer_id: str) -> Callable:
+        def fn(module, grad_input, grad_output):
+            if (self.gradients[layer_id] is None) or (not self.concat):
+                self.gradients[layer_id] = grad_output[0].detach().cpu()
+            else:
+                self.gradients[layer_id] = torch.cat((self.gradients[layer_id],grad_output[0].detach().cpu()), dim=0)
+                
+        return fn
+
+    def remove_all_hooks(self):
+        for layer_id in self.layers:
+            self.hooks['forward'][layer_id].remove()
+            self.hooks['backward'][layer_id].remove()
+
+
+
 class actgrad_filter_extractor(nn.Module):
     def __init__(self, model: nn.Module, layers: Iterable[str],absolute=True,sum_map=True):
         super().__init__()
