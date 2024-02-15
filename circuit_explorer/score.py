@@ -287,123 +287,74 @@ def actgrad_kernel_score(model,dataloader,target_layer_name,unit,loss_f = sum_ab
 
 
 
-from typing import Dict, Iterable, Callable
-class actgrad_extractor(nn.Module):
-    def __init__(self, model: nn.Module, layers: Iterable[str], concat=True):
-        super().__init__()
-        self.model = model
-        self.layers = layers
-        self.activations = {layer: None for layer in layers}
-        self.gradients = {layer: None for layer in layers}
-        self.concat = concat
-
-    def __enter__(self, *args):
-        #self.remove_all_hooks() 
-        self.hooks = {'forward':{},
-                      'backward':{}}   #saving hooks to variables lets us remove them later if we want
-        for layer_id in self.layers:
-            layer = dict([*self.model.named_modules()])[layer_id]
-            self.hooks['forward'][layer_id] = layer.register_forward_hook(self.save_activations(layer_id)) #execute on forward pass
-            self.hooks['backward'][layer_id] = layer.register_backward_hook(self.save_gradients(layer_id))    #execute on backwards pass      
-        return self
-
-    def __exit__(self, *args): 
-        self.remove_all_hooks()
-
-
-    def save_activations(self, layer_id: str) -> Callable:
-        def fn(module, input, output):  #register_hook expects to recieve a function with arguments like this
-            #output is what is return by the layer with dim (batch_dim x out_dim), sum across the batch dim
-            if (self.activations[layer_id] is None) or (not self.concat):
-                self.activations[layer_id] = output.detach().cpu()
-            else:
-                self.activations[layer_id] = torch.cat((self.activations[layer_id],output.detach().cpu()), dim=0)           
-        return fn
-
-    def save_gradients(self, layer_id: str) -> Callable:
-        def fn(module, grad_input, grad_output):
-            if (self.gradients[layer_id] is None) or (not self.concat):
-                self.gradients[layer_id] = grad_output[0].detach().cpu()
-            else:
-                self.gradients[layer_id] = torch.cat((self.gradients[layer_id],grad_output[0].detach().cpu()), dim=0)
-                
-        return fn
-
-    def remove_all_hooks(self):
-        for layer_id in self.layers:
-            self.hooks['forward'][layer_id].remove()
-            self.hooks['backward'][layer_id].remove()
-
-
-
 class actgrad_filter_extractor(nn.Module):
-    def __init__(self, model: nn.Module, layers: Iterable[str],absolute=True,sum_map=True):
-        super().__init__()
-        self.model = model
-        self.layers = layers
-        self.activations = {layer: None for layer in layers}
-        self.gradients = {layer: None for layer in layers}
-        self.absolute = absolute
-        self.sum_map = sum_map
+	def __init__(self, model: nn.Module, layers: Iterable[str],absolute=True,sum_map=True):
+		super().__init__()
+		self.model = model
+		self.layers = layers
+		self.activations = {layer: None for layer in layers}
+		self.gradients = {layer: None for layer in layers}
+		self.absolute = absolute
+		self.sum_map = sum_map
 
-    def __enter__(self, *args):
-        #self.remove_all_hooks() 
-        self.hooks = {'forward':{},
-                      'backward':{}}   #saving hooks to variables lets us remove them later if we want
-        for layer_id in self.layers:
-            layer = dict([*self.model.named_modules()])[layer_id]
-            self.hooks['forward'][layer_id] = layer.register_forward_hook(self.save_activations(layer_id)) #execute on forward pass
-            self.hooks['backward'][layer_id] = layer.register_backward_hook(self.save_gradients(layer_id))    #execute on backwards pass      
-        return self
+	def __enter__(self, *args):
+		#self.remove_all_hooks() 
+		self.hooks = {'forward':{},
+					  'backward':{}}   #saving hooks to variables lets us remove them later if we want
+		for layer_id in self.layers:
+			layer = dict([*self.model.named_modules()])[layer_id]
+			self.hooks['forward'][layer_id] = layer.register_forward_hook(self.save_activations(layer_id)) #execute on forward pass
+			self.hooks['backward'][layer_id] = layer.register_backward_hook(self.save_gradients(layer_id))    #execute on backwards pass      
+		return self
 
-    def __exit__(self, *args): 
-        self.remove_all_hooks()
+	def __exit__(self, *args): 
+		self.remove_all_hooks()
 
 
-    def save_activations(self, layer_id: str) -> Callable:
-        def fn(module, input, output):  #register_hook expects to recieve a function with arguments like this
-            #output is what is return by the layer with dim (batch_dim x out_dim), sum across the batch dim
-            if self.sum_map:
-                if self.absolute:
-                    batch_summed_output = torch.sum(torch.abs(output),dim=0).detach().cpu()
-                else:
-                    batch_summed_output = torch.sum(output,dim=0).detach().cpu()
-                if self.activations[layer_id] is None:
-                    self.activations[layer_id] = batch_summed_output
-                else:
-                    self.activations[layer_id] +=  batch_summed_output
-            else:
-                if self.activations[layer_id] is None:
-                    self.activations[layer_id] = output.detach().cpu()
-                else:
-                    self.activations[layer_id] +=  output.detach().cpu()
-                
-        return fn
+	def save_activations(self, layer_id: str) -> Callable:
+		def fn(module, input, output):  #register_hook expects to recieve a function with arguments like this
+			#output is what is return by the layer with dim (batch_dim x out_dim), sum across the batch dim
+			if self.sum_map:
+				if self.absolute:
+					batch_summed_output = torch.sum(torch.abs(output),dim=0).detach().cpu()
+				else:
+					batch_summed_output = torch.sum(output,dim=0).detach().cpu()
+				if self.activations[layer_id] is None:
+					self.activations[layer_id] = batch_summed_output
+				else:
+					self.activations[layer_id] +=  batch_summed_output
+			else:
+				if self.activations[layer_id] is None:
+					self.activations[layer_id] = output.detach().cpu()
+				else:
+					self.activations[layer_id] +=  output.detach().cpu()
+				
+		return fn
 
-    def save_gradients(self, layer_id: str) -> Callable:
-        def fn(module, grad_input, grad_output):
-            if self.sum_map:
-                if self.absolute:
-                    batch_summed_output = torch.sum(torch.abs(grad_output[0]),dim=0).detach().cpu() #grad_output is a tuple with 'device' as second item
-                else:
-                    batch_summed_output = torch.sum(grad_output[0],dim=0).detach().cpu()
+	def save_gradients(self, layer_id: str) -> Callable:
+		def fn(module, grad_input, grad_output):
+			if self.sum_map:
+				if self.absolute:
+					batch_summed_output = torch.sum(torch.abs(grad_output[0]),dim=0).detach().cpu() #grad_output is a tuple with 'device' as second item
+				else:
+					batch_summed_output = torch.sum(grad_output[0],dim=0).detach().cpu()
 
-                if self.gradients[layer_id] is None:
-                    self.gradients[layer_id] = batch_summed_output
-                else:
-                    self.gradients[layer_id] +=  batch_summed_output 
-            else:
-                if self.gradients[layer_id] is None:
-                    self.gradients[layer_id] = grad_output[0].detach().cpu()
-                else:
-                    self.gradients[layer_id] +=  grad_output[0].detach().cpu()
-                
-        return fn
+				if self.gradients[layer_id] is None:
+					self.gradients[layer_id] = batch_summed_output
+				else:
+					self.gradients[layer_id] +=  batch_summed_output 
+			else:
+				if self.gradients[layer_id] is None:
+					self.gradients[layer_id] = grad_output[0].detach().cpu()
+				else:
+					self.gradients[layer_id] +=  grad_output[0].detach().cpu()
+				
+		return fn
 
-    def remove_all_hooks(self):
-        for layer_id in self.layers:
-            self.hooks['forward'][layer_id].remove()
-            self.hooks['backward'][layer_id].remove()
+	def remove_all_hooks(self):
+		for layer_id in self.layers:
+			self.hooks['forward'][layer_id].remove()
+			self.hooks['backward'][layer_id].remove()
 
 
 
@@ -435,6 +386,7 @@ def actgrad_filter_score(model,dataloader,target_layer_name,unit,loss_f=sum_abs_
 			for i, data in enumerate(dataloader, 0):
 				inputs, label = data
 				inputs = inputs.to(device)
+				inputs.requires_grad_()
 
 				model.zero_grad() #very import!
 				target_activations = target_saver(inputs)
@@ -496,6 +448,168 @@ def actgrad_filter_score(model,dataloader,target_layer_name,unit,loss_f=sum_abs_
 
 
 
+#general purpose actgrad scoring
+class actgrad_extractor(nn.Module):
+    def __init__(self, model: nn.Module, layers: Iterable[str], concat=True, extract_grads = True):
+        super().__init__()
+        self.model = model
+        self.layers = layers
+        self.activations = {layer: None for layer in layers}
+        self.extract_grads = extract_grads
+        if extract_grads:
+            self.gradients = {layer: None for layer in layers}
+        self.concat = concat
+        
+
+    def __enter__(self, *args):
+        #self.remove_all_hooks() 
+        self.hooks = {'forward':{},
+                      'backward':{}}   #saving hooks to variables lets us remove them later if we want
+        for layer_id in self.layers:
+            layer = dict([*self.model.named_modules()])[layer_id]
+            self.hooks['forward'][layer_id] = layer.register_forward_hook(self.save_activations(layer_id)) #execute on forward pass
+            if self.extract_grads:
+                self.hooks['backward'][layer_id] = layer.register_full_backward_hook(self.save_gradients(layer_id))    #execute on backwards pass      
+        return self
+
+    def __exit__(self, *args): 
+        self.remove_all_hooks()
+
+
+    def save_activations(self, layer_id: str) -> Callable:
+        def fn(module, input, output):
+            output_clone = output.detach().cpu().clone()  # Clone the output tensor
+            if (self.activations[layer_id] is None) or (not self.concat):
+                self.activations[layer_id] = output_clone
+            else:
+                self.activations[layer_id] = torch.cat((self.activations[layer_id], output_clone), dim=0)
+        return fn
+
+    def save_gradients(self, layer_id: str) -> Callable:
+        def fn(module, grad_input, grad_output):
+            grad_output_clone = grad_output[0].detach().cpu().clone()  # Clone the gradient tensor
+            if (self.gradients[layer_id] is None) or (not self.concat):
+                self.gradients[layer_id] = grad_output_clone
+            else:
+                self.gradients[layer_id] = torch.cat((self.gradients[layer_id], grad_output_clone), dim=0)
+        return fn
+
+
+    def remove_all_hooks(self):
+        for layer_id in self.layers:
+            self.hooks['forward'][layer_id].remove()
+            if self.extract_grads: self.hooks['backward'][layer_id].remove()
+
+
+
+def actgrad_score(model,dataloader,target_layer_name,unit,loss_f=sum_abs_loss, absolute=True,return_target=False,relu=False,score_type = 'actgrad'):
+    '''
+    dataloader: pytorch dataloader or simply torch tensor (input)
+    '''
+    all_layers = OrderedDict([*model.named_modules()])
+    scoring_layers = []
+    for layer in all_layers:
+        if layer == target_layer_name:   #HACK MIGHT NOT WORK WITH INCEPTION
+            break
+        if isinstance(all_layers[layer],torch.nn.modules.conv.Conv2d) or isinstance(all_layers[layer],torch.nn.modules.Linear):
+            scoring_layers.append(layer)
+
+    _ = model.eval()
+    device = next(model.parameters()).device 
+
+    scores = OrderedDict()
+
+    if isinstance(dataloader,torch.Tensor):
+        dataloader = [(dataloader,torch.tensor(9999999))]
+
+
+    total_images = 0
+    overall_loss = 0
+    with feature_target_saver(model,target_layer_name,unit) as target_saver:
+        with actgrad_extractor(model,scoring_layers, concat=False) as score_saver:
+            for i, data in enumerate(dataloader, 0):
+                inputs, label = data
+                inputs = inputs.to(device)
+                inputs.requires_grad_()
+                
+                total_images += int(inputs.shape[0])
+
+                model.zero_grad() #very import!
+                target_activations = target_saver(inputs)
+
+                #feature collapse
+                loss = loss_f(target_activations)
+                overall_loss+=loss
+                loss.backward()
+
+                #get average by dividing result by length of dset
+                activations = score_saver.activations
+                gradients = score_saver.gradients
+
+
+                for l in scoring_layers:
+                    if absolute:
+                        activations[l] = torch.abs(activations[l])
+                        gradients[l] = torch.abs(gradients[l])
+                    if gradients[l] is None:
+                        continue
+                    if score_type == 'gradients':
+                        layer_scores = gradients[l].sum(dim=0)
+                    elif score_type == 'activations':
+                        #get mask where gradient zero (outside receptive field)
+                        #grad_mask = (gradients[l] != 0.).float()
+                        if relu:
+                            rl=nn.ReLU()
+                            #layer_scores = (rl(activations[l]) * grad_mask))
+                            layer_scores = rl(activations[l]).sum(dim=0)
+                        else:
+                            #layer_scores = (activations[l] * grad_mask).mean(dim=(1,2))
+                            layer_scores = activations[l]
+
+                    else:   
+                        if relu:
+                            rl=nn.ReLU()
+                            layer_scores = (rl(activations[l]) * gradients[l]).sum(dim=0)
+                        else:
+                            layer_scores = (activations[l] * gradients[l]).sum(dim=0)
+
+
+                    if l not in scores.keys():
+                        scores[l] = layer_scores
+                    else:
+                        scores[l] += layer_scores
+
+
+    #average by total_images
+    for layer in scores:
+        scores[layer] = scores[layer]/total_images
+
+    #remove un scored layers
+    remove_keys = []
+    for layer in scores:
+        if torch.sum(scores[layer]) == 0.:
+            remove_keys.append(layer)
+    if len(remove_keys) > 0: 
+        #print('removing layers from scores with scores all 0:')
+        for k in remove_keys:
+            #print(k)
+            del scores[k]
+
+
+    model.zero_grad() 
+    if return_target:
+        return scores,float(overall_loss.detach().cpu())
+    else:
+        return scores
+    
+    
+    
+
+
+
+
+#lesser scoring methods
+
 def magnitude_scores_from_scores(scores,model,target_layer_name,unit,structure='kernels'):
 
 	'''
@@ -552,16 +666,20 @@ def structure_scores(scores, model, structure='kernels'):
 	
 	assert structure in ['kernels','filters']
 	layers = OrderedDict([*model.named_modules()])
-	
-	if structure == 'kernels':
-		collapse_dims = (2,3)
-	else:
-		collapse_dims = (1,2,3)
-		
+
 	structured_scores = OrderedDict()
 	for layer_name in scores:
 		if isinstance(layers[layer_name],nn.Conv2d):
+			if structure == 'filters':
+				if (len(scores[layer_name]) == 4):
+					collapse_dims = (1,2,3)
+				else:
+					collapse_dims = (1,2)
+			else:
+				collapse_dims = (2,3)
 			structured_scores[layer_name] = torch.mean(scores[layer_name],dim=collapse_dims)
+		else:
+			structured_scores[layer_name] = scores[layer_name]
 			
 	return structured_scores      
 		

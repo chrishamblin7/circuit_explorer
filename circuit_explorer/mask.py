@@ -182,8 +182,6 @@ def structured_mask_from_mask(mask, structure = 'kernels'):
 	return out_mask
 
 
-
-
 def mask_intersect_over_union(mask1,mask2):
 	iou = {}
 	for layer_name in mask1:
